@@ -16,6 +16,8 @@
 package com.github.tomakehurst.wiremock;
 
 import com.github.tomakehurst.wiremock.http.Fault;
+import com.github.tomakehurst.wiremock.stubbing.ListStubMappingsResult;
+import com.github.tomakehurst.wiremock.stubbing.StubMapping;
 import com.github.tomakehurst.wiremock.testsupport.WireMockResponse;
 import org.apache.http.MalformedChunkCodingException;
 import org.apache.http.NoHttpResponseException;
@@ -24,6 +26,8 @@ import org.junit.Test;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
+import static com.github.tomakehurst.wiremock.http.RequestMethod.GET;
+import static com.github.tomakehurst.wiremock.http.RequestMethod.POST;
 import static com.github.tomakehurst.wiremock.testsupport.TestHttpHeader.withHeader;
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static java.net.HttpURLConnection.HTTP_OK;
@@ -91,6 +95,29 @@ public class StubbingAcceptanceTest extends AcceptanceTestBase {
 		
 		assertThat(response.statusCode(), is(204));
 	}
+
+    @Test
+    public void doesNotMatchOnAbsentHeader() {
+        stubFor(post(urlEqualTo("/some/url"))
+                .withRequestBody(containing("BODY"))
+                .withHeader("NoSuchHeader", equalTo("This better not be here"))
+                .willReturn(aResponse().withStatus(200)));
+
+        assertThat(testClient.postWithBody("/some/url", "BODY", "text/plain", "utf-8").statusCode(), is(404));
+    }
+
+    @Test
+    public void matchesIfRequestContainsHeaderNotSpecified() {
+        stubFor(get(urlEqualTo("/some/extra/header"))
+                .withHeader("ExpectedHeader", equalTo("expected-value"))
+                .willReturn(aResponse().withStatus(200)));
+
+        WireMockResponse response = testClient.get("/some/extra/header",
+                withHeader("ExpectedHeader", "expected-value"),
+                withHeader("UnexpectedHeader", "unexpected-value"));
+
+        assertThat(response.statusCode(), is(200));
+    }
 	
 	@Test
 	public void responseBodyLoadedFromFile() {
@@ -224,7 +251,35 @@ public class StubbingAcceptanceTest extends AcceptanceTestBase {
 
         assertThat(testClient.get("/binary/content").binaryContent(), is(bytes));
     }
-	
+
+    @Test
+    public void listingAllStubMappings() {
+        stubFor(get(urlEqualTo("/stub/one")).willReturn(aResponse().withBody("One")));
+        stubFor(post(urlEqualTo("/stub/two")).willReturn(aResponse().withBody("Two").withStatus(201)));
+
+        ListStubMappingsResult listingResult = listAllStubMappings();
+        StubMapping mapping1 = listingResult.getMappings().get(0);
+        assertThat(mapping1.getRequest().getMethod(), is(POST));
+        assertThat(mapping1.getRequest().getUrl(), is("/stub/two"));
+        assertThat(mapping1.getResponse().getBody(), is("Two"));
+        assertThat(mapping1.getResponse().getStatus(), is(201));
+
+        StubMapping mapping2 = listingResult.getMappings().get(1);
+        assertThat(mapping2.getRequest().getMethod(), is(GET));
+        assertThat(mapping2.getRequest().getUrl(), is("/stub/one"));
+        assertThat(mapping2.getResponse().getBody(), is("One"));
+    }
+
+    @Test
+    public void stubbingPatch() {
+        stubFor(patch(urlEqualTo("/a/registered/resource")).withRequestBody(equalTo("some body"))
+                .willReturn(aResponse().withStatus(204)));
+
+        WireMockResponse response = testClient.patchWithBody("/a/registered/resource", "some body", "text/plain");
+
+        assertThat(response.statusCode(), is(204));
+    }
+
 	private void getAndAssertUnderlyingExceptionInstanceClass(String url, Class<?> expectedClass) {
 		boolean thrown = false;
 		try {

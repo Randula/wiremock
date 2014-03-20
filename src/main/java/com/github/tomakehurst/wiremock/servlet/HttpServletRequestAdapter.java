@@ -16,7 +16,7 @@
 package com.github.tomakehurst.wiremock.servlet;
 
 import com.github.tomakehurst.wiremock.http.*;
-import com.github.tomakehurst.wiremock.mapping.Request;
+import com.github.tomakehurst.wiremock.jetty.ServletContainerUtils;
 import com.google.common.io.CharStreams;
 
 import javax.servlet.http.HttpServletRequest;
@@ -42,22 +42,22 @@ public class HttpServletRequestAdapter implements Request {
 	@Override
 	public String getUrl() {
 		String url = request.getRequestURI();
-		
+
 		if (!isNullOrEmpty(request.getContextPath())) {
 			url = url.replace(request.getContextPath(), "");
 		}
-		
-		if (!isNullOrEmpty(request.getQueryString())) {
-			url = url + "?" + request.getQueryString();
-		}
-		
-		return url;
+
+		return withQueryStringIfPresent(url);
 	}
 	
 	@Override
 	public String getAbsoluteUrl() {
-		return request.getRequestURL().toString();
+		return withQueryStringIfPresent(request.getRequestURL().toString());
 	}
+
+    private String withQueryStringIfPresent(String url) {
+        return url + (isNullOrEmpty(request.getQueryString()) ? "" : "?" + request.getQueryString());
+    }
 
 	@Override
 	public RequestMethod getMethod() {

@@ -15,18 +15,19 @@
  */
 package com.github.tomakehurst.wiremock.client;
 
+import com.github.tomakehurst.wiremock.common.Json;
 import com.github.tomakehurst.wiremock.http.Fault;
 import com.github.tomakehurst.wiremock.http.HttpHeader;
 import com.github.tomakehurst.wiremock.http.HttpHeaders;
 import com.github.tomakehurst.wiremock.mapping.CallbackRequest;
-import com.github.tomakehurst.wiremock.mapping.ResponseDefinition;
-import com.google.common.collect.Lists;
+import com.github.tomakehurst.wiremock.http.ResponseDefinition;
 
 import java.nio.charset.Charset;
 import java.util.List;
 
 import static com.google.common.base.Charsets.UTF_8;
 import static com.google.common.collect.Lists.newArrayList;
+import static java.net.HttpURLConnection.HTTP_OK;
 
 public class ResponseDefinitionBuilder {
 
@@ -40,6 +41,15 @@ public class ResponseDefinitionBuilder {
 	private Fault fault;
 	private CallbackRequest callbackRequest;
 
+
+    public static ResponseDefinition jsonResponse(Object body) {
+        return new ResponseDefinitionBuilder()
+                .withBody(Json.write(body))
+                .withStatus(HTTP_OK)
+                .withHeader("Content-Type", "application/json")
+                .build();
+    }
+	
 	public ResponseDefinitionBuilder withStatus(int status) {
 		this.status = status;
 		return this;

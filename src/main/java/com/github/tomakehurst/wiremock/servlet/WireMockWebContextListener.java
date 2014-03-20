@@ -15,19 +15,25 @@
  */
 package com.github.tomakehurst.wiremock.servlet;
 
+import com.github.tomakehurst.wiremock.Log4jConfiguration;
+import com.github.tomakehurst.wiremock.common.Log4jNotifier;
+import com.github.tomakehurst.wiremock.common.Notifier;
+import com.github.tomakehurst.wiremock.core.MappingsSaver;
+import com.github.tomakehurst.wiremock.http.AdminRequestHandler;
+import com.github.tomakehurst.wiremock.common.ServletContextFileSource;
+import com.github.tomakehurst.wiremock.core.WireMockApp;
+import com.github.tomakehurst.wiremock.global.NotImplementedRequestDelayControl;
+import com.github.tomakehurst.wiremock.http.*;
+import com.github.tomakehurst.wiremock.standalone.JsonFileMappingsLoader;
+import com.github.tomakehurst.wiremock.standalone.JsonFileMappingsSaver;
+
 import javax.servlet.ServletContext;
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
 
-import com.github.tomakehurst.wiremock.WireMockApp;
-import com.github.tomakehurst.wiremock.common.Log4jNotifier;
-import com.github.tomakehurst.wiremock.common.ServletContextFileSource;
-import com.github.tomakehurst.wiremock.mapping.AdminRequestHandler;
-import com.github.tomakehurst.wiremock.mapping.MockServiceRequestHandler;
-import com.github.tomakehurst.wiremock.standalone.JsonFileMappingsLoader;
-
 public class WireMockWebContextListener implements ServletContextListener {
-    
+
+    private static final String FILES_ROOT = "__files";
     private static final String APP_CONTEXT_KEY = "WireMockApp";
     private static final String FILE_SOURCE_ROOT_KEY = "WireMockFileSourceRoot";
 
@@ -37,15 +43,26 @@ public class WireMockWebContextListener implements ServletContextListener {
         String fileSourceRoot = context.getInitParameter(FILE_SOURCE_ROOT_KEY);
         
         ServletContextFileSource fileSource = new ServletContextFileSource(context, fileSourceRoot);
-        Log4jNotifier notifier = new Log4jNotifier();
-        notifier.setVerbose(true);
-        
-        WireMockApp wireMockApp = new WireMockApp(fileSource, notifier, false);
+        Log4jConfiguration.configureLogging(true);
+
+        JsonFileMappingsLoader defaultMappingsLoader = new JsonFileMappingsLoader(fileSource.child("mappings"));
+        MappingsSaver mappingsSaver = new NotImplementedMappingsSaver();
+        WireMockApp wireMockApp = new WireMockApp(
+                new NotImplementedRequestDelayControl(),
+                false,
+                defaultMappingsLoader,
+                mappingsSaver,
+                false,
+                new NotImplementedContainer());
+        AdminRequestHandler adminRequestHandler = new AdminRequestHandler(wireMockApp, new BasicResponseRenderer());
+        StubRequestHandler stubRequestHandler = new StubRequestHandler(wireMockApp,
+                new StubResponseRenderer(fileSource.child(FILES_ROOT),
+                        wireMockApp.getGlobalSettingsHolder(),
+                        new ProxyResponseRenderer()));
         context.setAttribute(APP_CONTEXT_KEY, wireMockApp);
-        context.setAttribute(MockServiceRequestHandler.class.getName(), wireMockApp.getMockServiceRequestHandler());
-        context.setAttribute(AdminRequestHandler.class.getName(), wireMockApp.getAdminRequestHandler());
-        
-        wireMockApp.loadMappingsUsing(new JsonFileMappingsLoader(fileSource.child("mappings")));
+        context.setAttribute(StubRequestHandler.class.getName(), stubRequestHandler);
+        context.setAttribute(AdminRequestHandler.class.getName(), adminRequestHandler);
+        context.setAttribute(Notifier.KEY, new Log4jNotifier());
     }
 
     @Override

@@ -15,18 +15,18 @@
  */
 package com.github.tomakehurst.wiremock.common;
 
-import static com.google.common.base.Charsets.UTF_8;
-import static com.google.common.collect.Iterables.transform;
-import static com.google.common.collect.Lists.newArrayList;
-import static java.util.Arrays.asList;
+import com.google.common.base.Function;
+import com.google.common.io.Files;
 
 import java.io.File;
 import java.io.FileFilter;
 import java.io.IOException;
 import java.util.List;
 
-import com.google.common.base.Function;
-import com.google.common.io.Files;
+import static com.google.common.base.Charsets.UTF_8;
+import static com.google.common.collect.Iterables.transform;
+import static com.google.common.collect.Lists.newArrayList;
+import static java.util.Arrays.asList;
 
 public abstract class AbstractFileSource implements FileSource {
 
@@ -105,6 +105,11 @@ public abstract class AbstractFileSource implements FileSource {
     @Override
     public void writeBinaryFile(String name, byte[] contents) {
         writeBinaryFileAndTranslateExceptions(contents, writableFileFor(name));
+    }
+
+    @Override
+    public boolean exists() {
+        return rootDirectory.exists();
     }
 
     private File writableFileFor(String name) {

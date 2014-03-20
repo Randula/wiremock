@@ -15,24 +15,50 @@
  */
 package com.github.tomakehurst.wiremock.junit;
 
+import com.github.tomakehurst.wiremock.WireMockServer;
+import com.github.tomakehurst.wiremock.client.MappingBuilder;
+import com.github.tomakehurst.wiremock.client.RequestPatternBuilder;
+import com.github.tomakehurst.wiremock.client.WireMock;
+import com.github.tomakehurst.wiremock.core.Options;
+import com.github.tomakehurst.wiremock.http.RequestListener;
+import com.github.tomakehurst.wiremock.verification.LoggedRequest;
 import org.junit.rules.MethodRule;
+import org.junit.rules.TestRule;
+import org.junit.runner.Description;
 import org.junit.runners.model.FrameworkMethod;
 import org.junit.runners.model.Statement;
 
-import com.github.tomakehurst.wiremock.WireMockServer;
-import com.github.tomakehurst.wiremock.client.WireMock;
+import java.util.List;
 
-public class WireMockRule implements MethodRule {
-	
-	private int port;
-	
-	public WireMockRule(int port) {
-		this.port = port;
+import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
+
+public class WireMockRule implements MethodRule, TestRule, Stubbing {
+
+    private final Options options;
+    private WireMock wireMock;
+
+    private WireMockServer wireMockServer;
+
+    public WireMockRule(Options options) {
+        this.options = options;
+    }
+
+    public WireMockRule(int port) {
+		this(wireMockConfig().port(port));
 	}
+
+    public WireMockRule(int port, Integer httpsPort) {
+        this(wireMockConfig().port(port).httpsPort(httpsPort));
+    }
 	
 	public WireMockRule() {
-		this(WireMockServer.DEFAULT_PORT);
+		this(wireMockConfig());
 	}
+
+    @Override
+    public Statement apply(final Statement base, Description description) {
+        return apply(base, null, null);
+    }
 
 	@Override
 	public Statement apply(final Statement base, FrameworkMethod method, Object target) {
@@ -40,9 +66,10 @@ public class WireMockRule implements MethodRule {
 
 			@Override
 			public void evaluate() throws Throwable {
-				WireMockServer wireMockServer = new WireMockServer(port);
+				wireMockServer = new WireMockServer(options);
 				wireMockServer.start();
-				WireMock.configureFor("localhost", port);
+				WireMock.configureFor("localhost", port());
+                wireMock = new WireMock("localhost", port());
 				try {
                     base.evaluate();
                 } finally {
@@ -53,4 +80,50 @@ public class WireMockRule implements MethodRule {
 		};
 	}
 
+    public void addMockServiceRequestListener(RequestListener requestListener) {
+        wireMockServer.addMockServiceRequestListener(requestListener);
+    }
+
+    @Override
+    public void givenThat(MappingBuilder mappingBuilder) {
+        wireMock.register(mappingBuilder);
+    }
+
+    @Override
+    public void stubFor(MappingBuilder mappingBuilder) {
+        givenThat(mappingBuilder);
+    }
+
+    @Override
+    public void verify(RequestPatternBuilder requestPatternBuilder) {
+        wireMock.verifyThat(requestPatternBuilder);
+    }
+
+    @Override
+    public void verify(int count, RequestPatternBuilder requestPatternBuilder) {
+        wireMock.verifyThat(count, requestPatternBuilder);
+    }
+
+    @Override
+    public List<LoggedRequest> findAll(RequestPatternBuilder requestPatternBuilder) {
+        return wireMock.find(requestPatternBuilder);
+    }
+
+    @Override
+    public void setGlobalFixedDelay(int milliseconds) {
+        wireMock.setGlobalFixedDelayVariable(milliseconds);
+    }
+
+    @Override
+    public void addRequestProcessingDelay(int milliseconds) {
+        wireMock.addDelayBeforeProcessingRequests(milliseconds);
+    }
+
+    public int port() {
+        return wireMockServer.port();
+    }
+
+    public int httpsPort() {
+        return wireMockServer.httpsPort();
+    }
 }

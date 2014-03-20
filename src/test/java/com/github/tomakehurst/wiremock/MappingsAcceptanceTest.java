@@ -19,9 +19,7 @@ import com.github.tomakehurst.wiremock.testsupport.MappingJsonSamples;
 import com.github.tomakehurst.wiremock.testsupport.WireMockResponse;
 import org.junit.Test;
 
-import static com.github.tomakehurst.wiremock.testsupport.MappingJsonSamples.MAPPING_REQUEST_FOR_BINARY_BYTE_BODY;
-import static com.github.tomakehurst.wiremock.testsupport.MappingJsonSamples.MAPPING_REQUEST_FOR_BYTE_BODY;
-import static com.github.tomakehurst.wiremock.testsupport.MappingJsonSamples.BINARY_COMPRESSED_CONTENT;
+import static com.github.tomakehurst.wiremock.testsupport.MappingJsonSamples.*;
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static junit.framework.Assert.assertNull;
 import static org.hamcrest.Matchers.is;
@@ -87,6 +85,33 @@ public class MappingsAcceptanceTest extends AcceptanceTestBase {
 		getResponseAndAssert404Status("/resource/12");
 		getResponseAndAssert404Status("/resource/13");
 	}
+
+    @Test
+    public void loadsDefaultMappingsOnStart() {
+        getResponseAndAssert200Status("/testmapping");
+    }
+
+    @Test
+    public void resetToDefaultRemovesAllButDefault() {
+        add200ResponseFor("/resource/11");
+
+        testClient.resetDefaultMappings();
+
+        getResponseAndAssert404Status("/resource/11");
+        getResponseAndAssert200Status("/testmapping");
+    }
+
+    @Test
+    public void resetToDefaultRestoresOldMeaningOfDefault() {
+        add200ResponseFor("/testmapping");
+        WireMockResponse response1 = testClient.get("/testmapping");
+        assertThat(response1.content(), is(""));
+
+        testClient.resetDefaultMappings();
+
+        WireMockResponse response2 = testClient.get("/testmapping");
+        assertThat(response2.content(), is("default test mapping"));
+    }
 
     @Test
     public void readsMapppingForByteBody() {

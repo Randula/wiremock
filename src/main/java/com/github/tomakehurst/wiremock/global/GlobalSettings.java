@@ -15,8 +15,8 @@
  */
 package com.github.tomakehurst.wiremock.global;
 
-import org.codehaus.jackson.map.annotate.JsonSerialize;
-import org.codehaus.jackson.map.annotate.JsonSerialize.Inclusion;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize.Inclusion;
 
 @JsonSerialize(include=Inclusion.NON_NULL)
 public class GlobalSettings {
@@ -27,7 +27,24 @@ public class GlobalSettings {
 		return fixedDelay;
 	}
 
-	public void setFixedDelay(Integer fixedDelay) {
-		this.fixedDelay = fixedDelay;
-	}
+    public void setFixedDelay(Integer fixedDelay) {
+        this.fixedDelay = fixedDelay;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        GlobalSettings that = (GlobalSettings) o;
+
+        if (fixedDelay != null ? !fixedDelay.equals(that.fixedDelay) : that.fixedDelay != null) return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        return fixedDelay != null ? fixedDelay.hashCode() : 0;
+    }
 }

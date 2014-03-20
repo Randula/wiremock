@@ -15,14 +15,11 @@
  */
 package com.github.tomakehurst.wiremock.verification;
 
-import com.github.tomakehurst.wiremock.http.ContentTypeHeader;
-import com.github.tomakehurst.wiremock.http.HttpHeader;
-import com.github.tomakehurst.wiremock.http.HttpHeaders;
-import com.github.tomakehurst.wiremock.http.RequestMethod;
-import com.github.tomakehurst.wiremock.mapping.Request;
-import org.codehaus.jackson.annotate.JsonCreator;
-import org.codehaus.jackson.annotate.JsonIgnore;
-import org.codehaus.jackson.annotate.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.github.tomakehurst.wiremock.http.*;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -30,6 +27,7 @@ import java.util.Set;
 
 import static com.github.tomakehurst.wiremock.http.HttpHeaders.copyOf;
 
+@JsonIgnoreProperties(ignoreUnknown=true)
 public class LoggedRequest implements Request {
 
     public static final String DATE_FORMAT = "yyyy-MM-dd HH:mm:ss";
@@ -53,7 +51,7 @@ public class LoggedRequest implements Request {
 	}
 
     @JsonCreator
-    private LoggedRequest(@JsonProperty("url") String url,
+    public LoggedRequest(@JsonProperty("url") String url,
                          @JsonProperty("absoluteUrl") String absoluteUrl,
                          @JsonProperty("method") RequestMethod method,
                          @JsonProperty("headers") HttpHeaders headers,
@@ -136,7 +134,6 @@ public class LoggedRequest implements Request {
         return loggedDate;
     }
 
-    @JsonIgnore
     public String getLoggedDateString() {
         return format(loggedDate);
     }

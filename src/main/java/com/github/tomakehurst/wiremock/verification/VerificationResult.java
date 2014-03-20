@@ -15,22 +15,35 @@
  */
 package com.github.tomakehurst.wiremock.verification;
 
-public class VerificationResult {
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.github.tomakehurst.wiremock.common.Json;
 
-	private int count;
+public class VerificationResult extends JournalBasedResult {
 
-	public int getCount() {
+	private final Integer count;
+
+    @JsonCreator
+    public VerificationResult(@JsonProperty("count") Integer count,
+                              @JsonProperty("requestJournalDisabled") boolean requestJournalDisabled) {
+        super(requestJournalDisabled);
+        this.count = count;
+    }
+
+    public static VerificationResult from(String json) {
+		return Json.read(json, VerificationResult.class);
+	}
+
+    public static VerificationResult withCount(int count) {
+        return new VerificationResult(count, false);
+    }
+
+    public static VerificationResult withRequestJournalDisabled() {
+        return new VerificationResult(-1, true);
+    }
+
+    public int getCount() {
 		return count;
 	}
 
-	public void setCount(int count) {
-		this.count = count;
-	}
-
-	public VerificationResult(int count) {
-		this.count = count;
-	}
-
-	public VerificationResult() {
-	}
 }

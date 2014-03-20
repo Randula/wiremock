@@ -15,7 +15,8 @@
  */
 package com.github.tomakehurst.wiremock.verification;
 
-import com.github.tomakehurst.wiremock.mapping.RequestPattern;
+import com.github.tomakehurst.wiremock.http.Request;
+import com.github.tomakehurst.wiremock.matching.RequestPattern;
 
 import java.util.List;
 
@@ -24,4 +25,6 @@ public interface RequestJournal {
 	int countRequestsMatching(RequestPattern requestPattern);
     List<LoggedRequest> getRequestsMatching(RequestPattern requestPattern);
 	void reset();
+
+    void requestReceived(Request request);
 }

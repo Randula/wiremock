@@ -16,9 +16,9 @@
 package com.github.tomakehurst.wiremock.client;
 
 import com.github.tomakehurst.wiremock.http.RequestMethod;
-import com.github.tomakehurst.wiremock.mapping.RequestPattern;
-import com.github.tomakehurst.wiremock.mapping.RequestResponseMapping;
-import com.github.tomakehurst.wiremock.mapping.ResponseDefinition;
+import com.github.tomakehurst.wiremock.http.ResponseDefinition;
+import com.github.tomakehurst.wiremock.matching.RequestPattern;
+import com.github.tomakehurst.wiremock.stubbing.StubMapping;
 
 public class MappingBuilder {
 
@@ -69,10 +69,13 @@ public class MappingBuilder {
 		return this;
 	}
 
-	public RequestResponseMapping build() {
+	public StubMapping build() {
+		if (scenarioName == null && (requiredScenarioState != null || newScenarioState != null)) {
+			throw new IllegalStateException("Scenario name must be specified to require or set a new scenario state");
+		}
 		RequestPattern requestPattern = requestPatternBuilder.build();
 		ResponseDefinition response = responseDefBuilder.build();
-		RequestResponseMapping mapping = new RequestResponseMapping(requestPattern, response);
+		StubMapping mapping = new StubMapping(requestPattern, response);
 		mapping.setPriority(priority);
 		mapping.setScenarioName(scenarioName);
 		mapping.setRequiredScenarioState(requiredScenarioState);

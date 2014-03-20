@@ -15,39 +15,47 @@
  */
 package com.github.tomakehurst.wiremock.client;
 
+import com.github.tomakehurst.wiremock.core.Admin;
 import com.github.tomakehurst.wiremock.global.GlobalSettings;
+import com.github.tomakehurst.wiremock.global.RequestDelaySpec;
 import com.github.tomakehurst.wiremock.http.RequestMethod;
-import com.github.tomakehurst.wiremock.mapping.Json;
-import com.github.tomakehurst.wiremock.mapping.RequestPattern;
-import com.github.tomakehurst.wiremock.mapping.RequestResponseMapping;
+import com.github.tomakehurst.wiremock.matching.RequestPattern;
+import com.github.tomakehurst.wiremock.stubbing.ListStubMappingsResult;
+import com.github.tomakehurst.wiremock.stubbing.StubMapping;
 import com.github.tomakehurst.wiremock.verification.FindRequestsResult;
 import com.github.tomakehurst.wiremock.verification.LoggedRequest;
+import com.github.tomakehurst.wiremock.verification.VerificationResult;
+import org.skyscreamer.jsonassert.JSONCompareMode;
 
 import java.util.List;
+
+import static com.github.tomakehurst.wiremock.client.RequestPatternBuilder.allRequests;
+
 
 public class WireMock {
 
 	private static final int DEFAULT_PORT = 8080;
 	private static final String DEFAULT_HOST = "localhost";
 
-	private AdminClient adminClient;
 
+	private Admin admin;
+	
 	private static WireMock defaultInstance = new WireMock();
 
 	public WireMock(String host, int port) {
-		adminClient = new HttpAdminClient(host, port);
+		admin = new HttpAdminClient(host, port);
 	}
 
 	public WireMock(String host, int port, String urlPathPrefix) {
-		adminClient = new HttpAdminClient(host, port, urlPathPrefix);
+		admin = new HttpAdminClient(host, port, urlPathPrefix);
 	}
 
 	public WireMock() {
-		adminClient = new HttpAdminClient(DEFAULT_HOST, DEFAULT_PORT);
+		admin = new HttpAdminClient(DEFAULT_HOST, DEFAULT_PORT);
 	}
 
-	void setAdminClient(AdminClient adminClient) {
-		this.adminClient = adminClient;
+	void setAdmin(Admin admin) {
+		this.admin = admin;
 	}
 
 	public static void givenThat(MappingBuilder mappingBuilder) {
@@ -58,6 +66,10 @@ public class WireMock {
 		givenThat(mappingBuilder);
 	}
 
+    public static ListStubMappingsResult listAllStubMappings() {
+        return defaultInstance.allStubMappings();
+    }
+	
 	public static void configureFor(String host, int port) {
 		defaultInstance = new WireMock(host, port);
 	}
@@ -70,8 +82,16 @@ public class WireMock {
 		defaultInstance = new WireMock();
 	}
 
+    public void saveMappings() {
+        admin.saveMappings();
+    }
+
+    public static void saveAllMappings() {
+        defaultInstance.saveMappings();
+    }
+	
 	public void resetMappings() {
-		adminClient.resetMappings();
+		admin.resetMappings();
 	}
 
 	public static void reset() {
@@ -79,19 +99,30 @@ public class WireMock {
 	}
 
 	public void resetScenarios() {
-		adminClient.resetScenarios();
+		admin.resetScenarios();
 	}
 
 	public static void resetAllScenarios() {
 		defaultInstance.resetScenarios();
 	}
 
+    public void resetToDefaultMappings() {
+        admin.resetToDefaultMappings();
+    }
+
+    public static void resetToDefault() {
+        defaultInstance.resetToDefaultMappings();
+    }
+
 	public void register(MappingBuilder mappingBuilder) {
-		RequestResponseMapping mapping = mappingBuilder.build();
-		String json = Json.buildJsonStringFor(mapping);
-		adminClient.addResponse(json);
+		StubMapping mapping = mappingBuilder.build();
+		admin.addStubMapping(mapping);
 	}
 
+    public ListStubMappingsResult allStubMappings() {
+        return admin.listAllStubMappings();
+    }
+	
 	public static UrlMatchingStrategy urlEqualTo(String url) {
 		UrlMatchingStrategy urlStrategy = new UrlMatchingStrategy();
 		urlStrategy.setUrl(url);
@@ -109,6 +140,25 @@ public class WireMock {
 		headerStrategy.setEqualTo(value);
 		return headerStrategy;
 	}
+
+    public static ValueMatchingStrategy equalToJson(String value) {
+        ValueMatchingStrategy headerStrategy = new ValueMatchingStrategy();
+        headerStrategy.setEqualToJson(value);
+        return headerStrategy;
+    }
+
+    public static ValueMatchingStrategy equalToJson(String value, JSONCompareMode jsonCompareMode) {
+        ValueMatchingStrategy valueMatchingStrategy = new ValueMatchingStrategy();
+        valueMatchingStrategy.setJsonCompareMode(jsonCompareMode);
+        valueMatchingStrategy.setEqualToJson(value);
+        return valueMatchingStrategy;
+    }
+
+    public static ValueMatchingStrategy equalToXml(String value) {
+        ValueMatchingStrategy headerStrategy = new ValueMatchingStrategy();
+        headerStrategy.setEqualToXml(value);
+        return headerStrategy;
+    }
 
 	public static ValueMatchingStrategy containing(String value) {
 		ValueMatchingStrategy headerStrategy = new ValueMatchingStrategy();
@@ -128,6 +178,12 @@ public class WireMock {
 		return headerStrategy;
 	}
 
+    public static ValueMatchingStrategy matchingJsonPath(String jsonPath) {
+        ValueMatchingStrategy matchingStrategy = new ValueMatchingStrategy();
+        matchingStrategy.setJsonMatchesPath(jsonPath);
+        return matchingStrategy;
+    }
+	
 	public static MappingBuilder get(UrlMatchingStrategy urlMatchingStrategy) {
 		return new MappingBuilder(RequestMethod.GET, urlMatchingStrategy);
 	}
@@ -144,6 +200,10 @@ public class WireMock {
 		return new MappingBuilder(RequestMethod.DELETE, urlMatchingStrategy);
 	}
 
+	public static MappingBuilder patch(UrlMatchingStrategy urlMatchingStrategy) {
+		return new MappingBuilder(RequestMethod.PATCH, urlMatchingStrategy);
+	}
+	
 	public static MappingBuilder head(UrlMatchingStrategy urlMatchingStrategy) {
 		return new MappingBuilder(RequestMethod.HEAD, urlMatchingStrategy);
 	}
@@ -170,15 +230,21 @@ public class WireMock {
 
 	public void verifyThat(RequestPatternBuilder requestPatternBuilder) {
 		RequestPattern requestPattern = requestPatternBuilder.build();
-		if (adminClient.countRequestsMatching(requestPattern) < 1) {
-			throw new VerificationException("Expected: " + requestPattern);
+        VerificationResult result = admin.countRequestsMatching(requestPattern);
+        result.assertRequestJournalEnabled();
+
+		if (result.getCount() < 1) {
+			throw new VerificationException(requestPattern, find(allRequests()));
 		}
 	}
 
 	public void verifyThat(int count, RequestPatternBuilder requestPatternBuilder) {
 		RequestPattern requestPattern = requestPatternBuilder.build();
-		if (adminClient.countRequestsMatching(requestPattern) != count) {
-			throw new VerificationException("Expected " + count + " of: " + requestPattern);
+        VerificationResult result = admin.countRequestsMatching(requestPattern);
+        result.assertRequestJournalEnabled();
+
+		if (result.getCount() != count) {
+            throw new VerificationException(requestPattern, count, find(allRequests()));
 		}
 	}
 
@@ -191,7 +257,8 @@ public class WireMock {
 	}
 
     public List<LoggedRequest> find(RequestPatternBuilder requestPatternBuilder) {
-        FindRequestsResult result = adminClient.findRequestsMatching(requestPatternBuilder.build());
+        FindRequestsResult result = admin.findRequestsMatching(requestPatternBuilder.build());
+        result.assertRequestJournalEnabled();
         return result.getRequests();
     }
 
@@ -215,6 +282,10 @@ public class WireMock {
 		return new RequestPatternBuilder(RequestMethod.DELETE, urlMatchingStrategy);
 	}
 
+	public static RequestPatternBuilder patchRequestedFor(UrlMatchingStrategy urlMatchingStrategy) {
+		return new RequestPatternBuilder(RequestMethod.PATCH, urlMatchingStrategy);
+	}
+	
 	public static RequestPatternBuilder headRequestedFor(UrlMatchingStrategy urlMatchingStrategy) {
 		return new RequestPatternBuilder(RequestMethod.HEAD, urlMatchingStrategy);
 	}
@@ -234,7 +305,22 @@ public class WireMock {
 	public void setGlobalFixedDelayVariable(int milliseconds) {
 		GlobalSettings settings = new GlobalSettings();
 		settings.setFixedDelay(milliseconds);
-		adminClient.updateGlobalSettings(settings);
+		admin.updateGlobalSettings(settings);
 	}
 
+    public void addDelayBeforeProcessingRequests(int milliseconds) {
+        admin.addSocketAcceptDelay(new RequestDelaySpec(milliseconds));
+    }
+
+    public static void addRequestProcessingDelay(int milliseconds) {
+        defaultInstance.addDelayBeforeProcessingRequests(milliseconds);
+    }
+
+    public void shutdown() {
+        admin.shutdownServer();
+    }
+
+    public static void shutdownServer() {
+        defaultInstance.shutdown();
+    }
 }

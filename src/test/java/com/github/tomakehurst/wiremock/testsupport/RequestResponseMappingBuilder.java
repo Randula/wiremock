@@ -15,17 +15,17 @@
  */
 package com.github.tomakehurst.wiremock.testsupport;
 
-import static com.github.tomakehurst.wiremock.http.RequestMethod.GET;
-import static com.google.common.collect.Lists.newArrayList;
-
 import com.github.tomakehurst.wiremock.http.HttpHeader;
 import com.github.tomakehurst.wiremock.http.HttpHeaders;
 import com.github.tomakehurst.wiremock.http.RequestMethod;
-import com.github.tomakehurst.wiremock.mapping.RequestPattern;
-import com.github.tomakehurst.wiremock.mapping.RequestResponseMapping;
-import com.github.tomakehurst.wiremock.mapping.ResponseDefinition;
+import com.github.tomakehurst.wiremock.http.ResponseDefinition;
+import com.github.tomakehurst.wiremock.matching.RequestPattern;
+import com.github.tomakehurst.wiremock.stubbing.StubMapping;
 
 import java.util.List;
+
+import static com.github.tomakehurst.wiremock.http.RequestMethod.GET;
+import static com.google.common.collect.Lists.newArrayList;
 
 public class RequestResponseMappingBuilder {
 
@@ -64,11 +64,11 @@ public class RequestResponseMappingBuilder {
 		return this;
 	}
 	
-	public RequestResponseMapping build() {
+	public StubMapping build() {
 		RequestPattern requestPattern = new RequestPattern(method, url);
 		ResponseDefinition response = new ResponseDefinition(responseStatus, responseBody);
 		response.setHeaders(new HttpHeaders(headers));
-		RequestResponseMapping mapping = new RequestResponseMapping(requestPattern, response);
+		StubMapping mapping = new StubMapping(requestPattern, response);
 		return mapping;
 	}
 }

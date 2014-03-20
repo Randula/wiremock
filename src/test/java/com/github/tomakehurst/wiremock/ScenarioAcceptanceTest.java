@@ -15,20 +15,15 @@
  */
 package com.github.tomakehurst.wiremock;
 
-import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
-import static com.github.tomakehurst.wiremock.client.WireMock.get;
-import static com.github.tomakehurst.wiremock.client.WireMock.givenThat;
-import static com.github.tomakehurst.wiremock.client.WireMock.put;
-import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
-import static com.github.tomakehurst.wiremock.mapping.Scenario.STARTED;
+import com.github.tomakehurst.wiremock.client.WireMock;
+import com.github.tomakehurst.wiremock.testsupport.WireMockResponse;
+import org.junit.Test;
+
+import static com.github.tomakehurst.wiremock.client.WireMock.*;
+import static com.github.tomakehurst.wiremock.stubbing.Scenario.STARTED;
 import static java.net.HttpURLConnection.HTTP_OK;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
-
-import org.junit.Test;
-
-import com.github.tomakehurst.wiremock.client.WireMock;
-import com.github.tomakehurst.wiremock.testsupport.WireMockResponse;
 
 public class ScenarioAcceptanceTest extends AcceptanceTestBase {
 
@@ -94,4 +89,18 @@ public class ScenarioAcceptanceTest extends AcceptanceTestBase {
 		
 		assertThat(testClient.get("/stateful/resource").content(), is("Expected content"));
 	}
+
+    @Test(expected = IllegalStateException.class)
+    public void scenarioStateCannotBeSetIfScenarioIsNotNamed() {
+        givenThat(get(urlEqualTo("/some/resource"))
+                .willReturn(aResponse().withBody("Initial"))
+                .whenScenarioStateIs(STARTED));
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void scenarioStateTransitionCannotBeSetIfScenarioIsNotNamed() {
+        givenThat(put(urlEqualTo("/some/resource"))
+                .willReturn(aResponse().withStatus(HTTP_OK))
+                .willSetStateTo("BodyModified"));
+    }
 }

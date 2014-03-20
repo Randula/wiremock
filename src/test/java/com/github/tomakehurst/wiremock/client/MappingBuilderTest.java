@@ -15,8 +15,8 @@
  */
 package com.github.tomakehurst.wiremock.client;
 
-import com.github.tomakehurst.wiremock.mapping.RequestResponseMapping;
-import com.github.tomakehurst.wiremock.mapping.ValuePattern;
+import com.github.tomakehurst.wiremock.matching.ValuePattern;
+import com.github.tomakehurst.wiremock.stubbing.StubMapping;
 import org.junit.Test;
 
 import static com.github.tomakehurst.wiremock.http.RequestMethod.POST;
@@ -24,18 +24,13 @@ import static com.github.tomakehurst.wiremock.testsupport.WireMatchers.header;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertThat;
 
-import org.junit.Test;
-
-import com.github.tomakehurst.wiremock.mapping.ValuePattern;
-import com.github.tomakehurst.wiremock.mapping.RequestResponseMapping;
-
 public class MappingBuilderTest {
 
 	@Test
 	public void shouldBuildMappingWithExactUrlNoHeaders() {
 		UrlMatchingStrategy urlStrategy = new UrlMatchingStrategy();
 		urlStrategy.setUrl("/match/this");
-		RequestResponseMapping mapping =
+		StubMapping mapping =
 			new MappingBuilder(POST, urlStrategy)
 			.willReturn(new ResponseDefinitionBuilder().withStatus(201))
 			.build();
@@ -49,7 +44,7 @@ public class MappingBuilderTest {
 	public void shouldBuildMappingWithMatchedUrlNoHeaders() {
 		UrlMatchingStrategy urlStrategy = new UrlMatchingStrategy();
 		urlStrategy.setUrlPattern("/match/[A-Z]{5}");
-		RequestResponseMapping mapping =
+		StubMapping mapping =
 			new MappingBuilder(POST, urlStrategy)
 			.willReturn(new ResponseDefinitionBuilder())
 			.build();
@@ -62,7 +57,7 @@ public class MappingBuilderTest {
 		UrlMatchingStrategy urlStrategy = new UrlMatchingStrategy();
 		urlStrategy.setUrl("/match/this");
 		
-		RequestResponseMapping mapping =
+		StubMapping mapping =
 			new MappingBuilder(POST, urlStrategy)
 			.withHeader("Content-Type", headerStrategyEqualTo("text/plain"))
 			.withHeader("Encoding", headerStrategyMatches("UTF-\\d"))
@@ -77,7 +72,7 @@ public class MappingBuilderTest {
 	
 	@Test
 	public void shouldBuildMappingWithResponseBody() {
-		RequestResponseMapping mapping =
+		StubMapping mapping =
 			new MappingBuilder(POST, new UrlMatchingStrategy())
 			.willReturn(new ResponseDefinitionBuilder().withBody("Some content"))
 			.build();
@@ -87,7 +82,7 @@ public class MappingBuilderTest {
 
     @Test
     public void shouldBuildMappingWithResponseByteBody() {
-        RequestResponseMapping mapping =
+        StubMapping mapping =
                 new MappingBuilder(POST, new UrlMatchingStrategy())
                         .willReturn(new ResponseDefinitionBuilder().withBody("Some content".getBytes()))
                         .build();
@@ -98,7 +93,7 @@ public class MappingBuilderTest {
     @SuppressWarnings("unchecked")
 	@Test
 	public void shouldBuildMappingWithResponseHeaders() {
-		RequestResponseMapping mapping =
+		StubMapping mapping =
 			new MappingBuilder(POST, new UrlMatchingStrategy())
 			.willReturn(new ResponseDefinitionBuilder()
 				.withHeader("Content-Type", "text/xml")

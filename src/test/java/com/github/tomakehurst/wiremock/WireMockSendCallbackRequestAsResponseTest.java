@@ -21,7 +21,7 @@ import org.junit.Test;
 
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.http.RequestMethod;
-import com.github.tomakehurst.wiremock.mapping.Json;
+import com.github.tomakehurst.wiremock.common.Json;
 import com.github.tomakehurst.wiremock.testsupport.WireMockTestClient;
 
 /**

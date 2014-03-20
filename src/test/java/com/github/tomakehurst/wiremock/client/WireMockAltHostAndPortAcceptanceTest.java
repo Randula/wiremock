@@ -15,21 +15,17 @@
  */
 package com.github.tomakehurst.wiremock.client;
 
-import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
-import static com.github.tomakehurst.wiremock.client.WireMock.get;
-import static com.github.tomakehurst.wiremock.client.WireMock.givenThat;
-import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
-import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertThat;
-
-import java.net.InetAddress;
-
+import com.github.tomakehurst.wiremock.WireMockServer;
+import com.github.tomakehurst.wiremock.testsupport.WireMockTestClient;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.github.tomakehurst.wiremock.WireMockServer;
-import com.github.tomakehurst.wiremock.testsupport.WireMockTestClient;
+import java.net.InetAddress;
+
+import static com.github.tomakehurst.wiremock.client.WireMock.*;
+import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.assertThat;
 
 public class WireMockAltHostAndPortAcceptanceTest {
 	
@@ -38,9 +34,9 @@ public class WireMockAltHostAndPortAcceptanceTest {
 	
 	@Before
 	public void init() {
-		defaultServer = new WireMockServer();
+		defaultServer = new WireMockServer(0);
 		defaultServer.start();
-		altServer = new WireMockServer(8081);
+		altServer = new WireMockServer(0);
 		altServer.start();
 	}
 	
@@ -52,11 +48,11 @@ public class WireMockAltHostAndPortAcceptanceTest {
 
 	@Test
 	public void useStaticSyntaxOnAlternativeHostAndPort() throws Exception {
-		WireMockTestClient defaultTestClient = new WireMockTestClient(8080);
-		WireMockTestClient altTestClient = new WireMockTestClient(8081);
+		WireMockTestClient defaultTestClient = new WireMockTestClient(defaultServer.port());
+		WireMockTestClient altTestClient = new WireMockTestClient(altServer.port());
 		
 		String thisHostName = InetAddress.getLocalHost().getHostName();
-		WireMock.configureFor(thisHostName, 8081);
+        WireMock.configureFor(thisHostName, altServer.port());
 		
 		givenThat(get(urlEqualTo("/resource/on/other/address"))
 				.willReturn(aResponse()

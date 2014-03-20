@@ -16,7 +16,6 @@
 package com.github.tomakehurst.wiremock.http;
 
 import com.google.common.base.Optional;
-import com.github.tomakehurst.wiremock.mapping.Request;
 
 public class ContentTypeHeader extends HttpHeader {
 
@@ -37,15 +36,20 @@ public class ContentTypeHeader extends HttpHeader {
         return new ContentTypeHeader();
     }
 
+    public ContentTypeHeader or(String stringValue) {
+        return isPresent() ? this : new ContentTypeHeader(stringValue);
+    }
+
 	public String mimeTypePart() {
 		return parts[0];
 	}
 	
 	public Optional<String> encodingPart() {
-		if (parts.length < 2) {
-			return Optional.absent();
+		for( int i = 1; i < parts.length; i++ ) {
+			if( parts[i].matches("\\s*charset\\s*=.*") ) {
+				return Optional.of(parts[i].split("=")[1]);
+			}
 		}
-		
-		return Optional.of(parts[1].split("=")[1]);
+		return Optional.absent();
 	}
 }

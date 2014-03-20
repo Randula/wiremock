@@ -15,23 +15,17 @@
  */
 package com.github.tomakehurst.wiremock;
 
-import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
-import static com.github.tomakehurst.wiremock.client.WireMock.any;
-import static com.github.tomakehurst.wiremock.client.WireMock.get;
-import static com.github.tomakehurst.wiremock.client.WireMock.givenThat;
-import static com.github.tomakehurst.wiremock.client.WireMock.matching;
-import static com.github.tomakehurst.wiremock.client.WireMock.post;
-import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
-import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
-import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertThat;
-
+import com.github.tomakehurst.wiremock.client.WireMock;
+import com.github.tomakehurst.wiremock.testsupport.TestHttpHeader;
+import com.github.tomakehurst.wiremock.testsupport.WireMockResponse;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.github.tomakehurst.wiremock.client.WireMock;
-import com.github.tomakehurst.wiremock.testsupport.WireMockResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.*;
+import static com.github.tomakehurst.wiremock.testsupport.TestHttpHeader.withHeader;
+import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.assertThat;
 
 public class ProxyAcceptanceTest extends AcceptanceTestBase {
 
@@ -89,14 +83,46 @@ public class ProxyAcceptanceTest extends AcceptanceTestBase {
 	public void successfullyGetsResponseFromOtherServiceViaProxyWithEscapeCharsInUrl() {
 		otherServiceClient.register(get(urlEqualTo("/%26%26The%20Lord%20of%20the%20Rings%26%26"))
 				.willReturn(aResponse()
-				.withStatus(200)));
+                        .withStatus(200)));
 		
 		givenThat(any(urlEqualTo("/%26%26The%20Lord%20of%20the%20Rings%26%26")).atPriority(10)
-				.willReturn(aResponse()
-				.proxiedFrom("http://localhost:8087")));
+                .willReturn(aResponse()
+                        .proxiedFrom("http://localhost:8087")));
 		
 		WireMockResponse response = testClient.get("/%26%26The%20Lord%20of%20the%20Rings%26%26");
 		
 		assertThat(response.statusCode(), is(200));
 	}
+
+    @Test
+    public void sendsContentLengthHeaderWhenPostingIfPresentInOriginalRequest() {
+        otherServiceClient.register(post(urlEqualTo("/with/length")).willReturn(aResponse().withStatus(201)));
+        stubFor(post(urlEqualTo("/with/length")).willReturn(aResponse().proxiedFrom("http://localhost:8087")));
+
+        testClient.postWithBody("/with/length", "TEST", "application/x-www-form-urlencoded", "utf-8");
+
+        otherServiceClient.verifyThat(postRequestedFor(urlEqualTo("/with/length")).withHeader("Content-Length", equalTo("4")));
+    }
+
+    @Test
+    public void sendsTransferEncodingChunkedWhenPostingIfPresentInOriginalRequest() {
+        otherServiceClient.register(post(urlEqualTo("/chunked")).willReturn(aResponse().withStatus(201)));
+        stubFor(post(urlEqualTo("/chunked")).willReturn(aResponse().proxiedFrom("http://localhost:8087")));
+
+        testClient.postWithChunkedBody("/chunked", "TEST".getBytes());
+
+        otherServiceClient.verifyThat(postRequestedFor(urlEqualTo("/chunked"))
+                .withHeader("Transfer-Encoding", equalTo("chunked")));
+    }
+
+    @Test
+    public void preservesHostHeaderWhenSpecified() {
+        otherServiceClient.register(get(urlEqualTo("/host-header")).willReturn(aResponse().withStatus(200)));
+        stubFor(get(urlEqualTo("/host-header")).willReturn(aResponse().proxiedFrom("http://localhost:8087")));
+
+        testClient.get("/host-header", withHeader("Host", "my.host"));
+
+        verify(getRequestedFor(urlEqualTo("/host-header")).withHeader("Host", equalTo("my.host")));
+        otherServiceClient.verifyThat(getRequestedFor(urlEqualTo("/host-header")).withHeader("Host", equalTo("my.host")));
+    }
 }

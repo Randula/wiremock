@@ -1,10 +1,12 @@
 package com.github.tomakehurst.wiremock.mapping;
 
-import static com.github.tomakehurst.wiremock.client.HttpClientUtils.getEntityAsByteArrayAndCloseStream;
+import static com.github.tomakehurst.wiremock.common.HttpClientUtils.*;
 
 import java.io.UnsupportedEncodingException;
 import java.util.Map;
 
+import com.github.tomakehurst.wiremock.common.Json;
+import com.github.tomakehurst.wiremock.http.Request;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
